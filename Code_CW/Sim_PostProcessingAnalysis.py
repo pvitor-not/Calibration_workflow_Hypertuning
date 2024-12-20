@@ -10,6 +10,7 @@ from fpdf import FPDF
 from datetime import datetime
 import lasio
 import numpy as np
+import Code_CW.StatisticalAnalysis as Statistics
 
 
 class PropSimAnalysis:
@@ -606,7 +607,7 @@ class RelatorioPDF(FPDF):
         self.set_font('times', 'I', size=12)
         self.cell(0, 16, f'Partial Calibration Report - {self.modelname}', ln=True, align='C')
         self.ln(16)
-    def subtitle(self, of_type, finaltime, best_variable, OF_value):
+    def subtitle(self, of_type, finaltime, best_variable, OF_value, labels):
         self.set_font('times', '', size=14.8)
 
         if self.page_no() == 1 and of_type == 'P':
@@ -620,8 +621,8 @@ class RelatorioPDF(FPDF):
             self.set_font('times', '', size=10)
             self.ln(7)
 
-            parameters = ['Carbo_GrainsProd', 'Carbo_MudProd', 'Carbo_RudProd', 'LutitesProd', 'S1Supply', 'S2Supply',
-                          'S3Supply']
+
+            parameters = labels
 
             best_variable_values = best_variable.split(',')
             col_widths = [22.5] * len(parameters)
@@ -661,8 +662,7 @@ class RelatorioPDF(FPDF):
             self.set_font('times', '', size=10)
             self.ln(7)
 
-            parameters = ['Carbo_GrainsProd', 'Carbo_MudProd', 'Carbo_RudProd', 'LutitesProd', 'S1Supply', 'S2Supply',
-                          'S3Supply']
+            parameters = labels
 
             best_variable_values = best_variable.split(',')
             col_widths = [22.5] * len(parameters)
@@ -935,10 +935,10 @@ class RelatorioPDF(FPDF):
             if isinstance(time, float):
                 time_str = str(time)
 
-
+            _, _, labels, _, _ = Statistics.StatisticalAnalysis(root_folder, of_type, param_interval=None).picker()
 
             best_variable_str = ', '.join(map(str, parameter))
-            self.subtitle(of_type, finaltime=time_str, best_variable=best_variable_str, OF_value=OF_value_str)
+            self.subtitle(of_type, finaltime=time_str, best_variable=best_variable_str, OF_value=OF_value_str, labels=labels[:-1])
             for i in range(len(folder_path)):
                 self.structure(folder_path[i])
             time_ = datetime.now().strftime('%d_%m_%Y %Hh%Mm%Ss')
