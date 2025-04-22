@@ -702,7 +702,7 @@ def runDionisosSim(root: str, engine: str, inputfile: str):
 	root = root.replace('C:\\','"C:\\')
 	inputfile = inputfile.replace('.arc','.arc"')
 	inputfile = f'\\{inputfile}'
-	CommandOptions = ' -t ="quiet" -o ' + root + 'arcades-output.log" --mpirun "C:\\Program Files\\Beicip\\OpenFlowSuite_2021\\WfEngine\\plugins\\fr.ifp.openflowsuite.intelmpi.win64_2019.3.203\\IntelMPI\\intel64\\bin\\mpiexec.exe" --mpirun-options=--delegate'
+	CommandOptions = ' -t ="quiet" -o ' + root + 'arcades-output.log" --mpirun "C:\\Program Files\\Beicip\\OpenFlowSuite_2023\\WfEngine\\plugins\\fr.ifp.openflowsuite.intelmpi.win64_2019.3.203\\IntelMPI\\intel64\\bin\\mpiexec.exe" --mpirun-options=--delegate'
 	ShellCommand = 'cmd /c "cd ' + root + '" && ' + engine + ' -n 1 '  + root + inputfile + CommandOptions + '"'
 	os.system(ShellCommand)
 

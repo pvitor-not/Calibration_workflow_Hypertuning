@@ -17,14 +17,14 @@ tic = time.time()
 
 #### Inputs ####
 ## Dionisos Simulator (.exe) file needed to run a perform a SFM simulation ##
-enginefolder = '"C:\\Program Files\\Beicip\\OpenFlowSuite_2021\\WfEngine\plugins\\fr.ifp.dionisosflow.arcades.engine.win64_13.1.0.r25519\\windows\\ArcaDESLauncher.exe"'
+enginefolder = r'"C:\Program Files\Beicip\OpenFlowSuite_2023\WfEngine\plugins\fr.ifp.dionisosflow.arcades.engine.win64_15.1.0.r27540\windows\ArcaDESLauncher.exe"'
 
 ## Working path containing your calibration/analysis cases ##
-root_folder = r"C:\Users\04099305201\Desktop\HT_Bayesian"
+root_folder = r"C:\Users\04099305201\Desktop\Modelos Dionisos"
 
 ## Calibration case folder ##
 
-case = "Combination_2"
+case = "PROOF_faciesdefinition"
 
 ### General Inputs ###
 ## Absolute initial coordinates of the project's grid defined on Dionisos interface ##
@@ -100,8 +100,8 @@ internal_optimizer = Functions.get_optimizer(internal_optimization_method)
 external_optimizer = Functions.get_optimizer(external_optimization_method)
 
 ## Population Size and Number of Iterations performed by calibration method ##
-pop_size = 1  # Population size
-max_iter = 1  # Maximum number of Iterations (Termination criterion)
+pop_size = 5  # Population size
+max_iter = 5  # Maximum number of Iterations (Termination criterion)
 
 ## Genetic Algorithm Aditional Parameters ##
 mutation_prob = 0.05  # Mutation Probability
