@@ -526,17 +526,14 @@ class PropSimAnalysis:
         plt.close()
 
     def faciesExtraction(self, wells, root, cell_ref, markers):
-        if self.of_type == 'S':
-            wells_perfil = {}
-            marker_table = self.readMarkersFile(markers)
-            for well in wells:
-                file = lasio.read(well)
-                wells_perfil[file.well.WELL.value] = PerfilFacies(file, marker_table, cell_ref, root)
+        wells_perfil = {}
+        marker_table = self.readMarkersFile(markers)
+        for well in wells:
+            file = lasio.read(well)
+            wells_perfil[file.well.WELL.value] = PerfilFacies(file, marker_table, cell_ref, root)
 
-            self.plotar_perfil(wells_perfil, self.facies_color)
-            self.plotar_perfilOBS(wells_perfil, self.facies_color)
-        else:
-            pass
+        self.plotar_perfil(wells_perfil, self.facies_color)
+        self.plotar_perfilOBS(wells_perfil, self.facies_color)
 
 
 class PAGeoWell:
@@ -572,6 +569,7 @@ class PerfilFacies:
         self.root_result = simdir
         self.ref = cell_ref
         self.df_analysis = self.get_well_data()
+
     def applyWellMarkers(self):
         if type(self.markers_table) != str:
             zones = self.markers_table.columns.to_list()
@@ -587,9 +585,18 @@ class PerfilFacies:
 
     def get_well_data(self) -> df:
         file = df(pd.read_excel(self.root_result, sheet_name=f'{self.ref}{self.name}')).set_index('Unnamed: 0')
-        list_col = ['depth', 'Thickness', 'facies']
-        extract_cols = [col for col in file.columns if col not in list_col]
+        list_col = ['depth', 'Thickness', 'facies', 'Thickness.1']
+        extract_cols = []
+        for col in file.columns:
+            if col not in list_col:
+                extract_cols.append(col)
+            else:
+                if file[col].ID == 'GeoWell':
+                    extract_cols.append(col)
         file.drop(columns=extract_cols, inplace=True)
+        if any(True for col in file.columns if col == 'Thickness.1'):
+            file = file.rename(columns={'Thickness.1': 'Thickness'})
+        file = file.iloc[:-1]
         return file
 
 
