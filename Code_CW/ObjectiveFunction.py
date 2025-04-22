@@ -827,6 +827,38 @@ class Probabilistic_OF(Objective_function):
 			print("Partial OF value: ", total_OF_value)
 			return total_OF_value, wells_OF, wellstats, total_OF_belief
 
+	def set_facies(self, values, faciesdef):
+		list_dist = []
+		cellf = 'Undetermined'
+		for j, facies in faciesdef.faciesTab.iterrows():
+			test = True
+			dist = 0
+			for prop in values.index:
+				cmin = prop + '_min'
+				cmax = prop + '_max'
+				if cmin not in faciesdef.faciesTab.columns:
+					continue  # property not used to define facies
+				elif facies[cmin] != None and facies[cmin] > values[prop]:
+					test = False
+				elif values[prop] > facies[cmax] and facies[cmax] != None:
+					test = False
+
+			if test:
+				cellf = facies.name
+				list_dist.append(0)
+			if not test:
+				list_dist.append(dist ** (1 / 2.))
+		return cellf, list_dist
+
+	def extract_facies(self):
+		for key, item in self.simwell_data.items():
+			list_f = []
+			for index, cell in item.normdata.iterrows():
+				facies, distances = self.set_facies(cell, self.facies_definition)
+				list_f.append(facies)
+
+			item.normdata['facies'] = list_f
+
 	def compute(self, inversible_parameters):
 		"""
 		Method to compute the total OF
@@ -840,6 +872,7 @@ class Probabilistic_OF(Objective_function):
 		self.extract_simulation_data()
 		self.extract_obs_well_data()
 		self.extract_sim_well_data()
+		self.extract_facies()
 
 		if self.reference_value != [] and self.simulation.counter == 0:
 			print(f'!!!WARNING!!!WARNING!!!WARNING!!!WARNING!!!WARNING!!!WARNING!!!WARNING!!!WARNING!!!WARNING!!!WARNING!!!WARNING!!!WARNING!!!\nYou must provide uncertain parameters reference values to test MixedModel calibration using Probabilistic Objective Function (PROOF) !!!WARNING!!!')
@@ -853,6 +886,14 @@ class Probabilistic_OF(Objective_function):
 		elif self.total_OF_method =='mean':
 			total_OF_value, wells_OF, fullstats = self.computeTotalOF()
 			total_OF_belief = ''
+
+		for key, item in fullstats.items():
+			obj_data = self.simwell_data[key]
+			item[2]['depth'] = obj_data.normdata['depth']
+			item[2]['facies'] = obj_data.normdata['facies']
+			item[2]['CCP'] = obj_data.normdata['CCP']
+			item[2]['TotalCasc'] = obj_data.normdata['TotalCasc']
+			item[2]['RSandMud'] = obj_data.normdata['RSandMud']
 
 		self.simulation.saveoutput(self.replaces, total_OF_value)
 		self.simulation.writeTotalOFresults(self.simdir,self.OF_type,total_OF_value, wells_OF)
