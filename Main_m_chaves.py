@@ -148,7 +148,7 @@ Sim_Analysis_Prop.scatterpie(Sim_Analysis_Prop.welldataprop, Sim_Analysis_Prop.i
 
 # Vertical well sections
 Sim_Analysis_Prop.faciesExtraction(Sim_Analysis_Prop.wells_file, Sim_Analysis_Prop.cell_reference,
-                                   Sim_Analysis_Prop.root_result, well_markers_file)
+                                   Sim_Analysis_Prop.root_result, well_markers_file, OF_type)
 
 # Statistical analysis
 Statistics.StatisticalAnalysis(root_folder=simdir, of_type=OF_type)
