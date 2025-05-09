@@ -411,11 +411,14 @@ class PropSimAnalysis:
             self.calcular_posicoes(item)
 
             for i in range(len(item.df_analysis['Thickness'])):
-                wellcolors = (cores.loc[f"{item.df_analysis['facies'][i]}", "R"],
-                              cores.loc[f"{item.df_analysis['facies'][i]}", "G"],
-                              cores.loc[f"{item.df_analysis['facies'][i]}", "B"])
-
-                facies_label = str(item.df_analysis['facies'][i])
+                try:
+                    wellcolors = (cores.loc[f"{item.df_analysis['facies'][i]}", "R"],
+                                  cores.loc[f"{item.df_analysis['facies'][i]}", "G"],
+                                  cores.loc[f"{item.df_analysis['facies'][i]}", "B"])
+                    facies_label = str(item.df_analysis['facies'][i])
+                except:
+                    wellcolors = (0, 0, 0)
+                    facies_label = 'Undetermined'
 
                 ax.barh(y=item.position[i], width=1, height=item.df_analysis['Thickness'][i], color=wellcolors,
                         align='edge')  # hatch=hatch_pattern)
@@ -525,12 +528,12 @@ class PropSimAnalysis:
         plt.savefig(f'{path_result}\\_WellsOBS_Log.png')
         plt.close()
 
-    def faciesExtraction(self, wells, root, cell_ref, markers):
+    def faciesExtraction(self, wells, root, cell_ref, markers, of_type):
         wells_perfil = {}
-        marker_table = self.readMarkersFile(markers)
+        marker_table = self.readMarkersFile(markers) if markers is not None else markers
         for well in wells:
             file = lasio.read(well)
-            wells_perfil[file.well.WELL.value] = PerfilFacies(file, marker_table, cell_ref, root)
+            wells_perfil[file.well.WELL.value] = PerfilFacies(file, marker_table, cell_ref, root, of_type)
 
         self.plotar_perfil(wells_perfil, self.facies_color)
         self.plotar_perfilOBS(wells_perfil, self.facies_color)
@@ -559,13 +562,14 @@ class PAGeoWell:
 
 
 class PerfilFacies:
-    def __init__(self, wellinfo, well_markers, simdir, cell_ref):
+    def __init__(self, wellinfo, well_markers, simdir, cell_ref, of):
+        self.of_value = of
         self.name = wellinfo.well.WELL.value
         self.markers_table = well_markers
         self.rowdata = {'depth': wellinfo.curves.DEPT.data, 'facies': wellinfo.curves.fac.data}
         self.sequence = df(self.rowdata)
         self.sequence = Functions.depth_to_thickness(self.sequence)
-        self.sequence = self.applyWellMarkers()
+        self.sequence = self.applyWellMarkers() if self.markers_table is not None else self.sequence
         self.root_result = simdir
         self.ref = cell_ref
         self.df_analysis = self.get_well_data()
@@ -591,12 +595,13 @@ class PerfilFacies:
             if col not in list_col:
                 extract_cols.append(col)
             else:
-                if file[col].ID == 'GeoWell':
-                    extract_cols.append(col)
+                if self.of_value.upper() == 'P':
+                    if file[col].ID == 'GeoWell':
+                        extract_cols.append(col)
         file.drop(columns=extract_cols, inplace=True)
         if any(True for col in file.columns if col == 'Thickness.1'):
             file = file.rename(columns={'Thickness.1': 'Thickness'})
-        file = file.iloc[:-1]
+        file = file.iloc[:-1] if self.of_value.upper() == "P" else file
         return file
 
 
