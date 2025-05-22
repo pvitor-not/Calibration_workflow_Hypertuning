@@ -894,6 +894,7 @@ class Probabilistic_OF(Objective_function):
 			item[2]['CCP'] = obj_data.normdata['CCP']
 			item[2]['TotalCasc'] = obj_data.normdata['TotalCasc']
 			item[2]['RSandMud'] = obj_data.normdata['RSandMud']
+			item[2]['Thickness'] = obj_data.normdata['Thickness']
 
 		self.simulation.saveoutput(self.replaces, total_OF_value)
 		self.simulation.writeTotalOFresults(self.simdir,self.OF_type,total_OF_value, wells_OF)
