@@ -15,7 +15,7 @@ import Code_CW.StatisticalAnalysis as Statistics
 
 class PropSimAnalysis:
     def __init__(self, root, of_type, well_files, id_file, extract_columns, domain,
-                 color_reference_file, facies_color):
+                 color_reference_file, facies_color, facies_def_obj, well_markers_data, origin_model, arcfile, engine):
         warnings.simplefilter(action='ignore', category=FutureWarning)
         self.root = root
         self.of_type = of_type.upper()
@@ -26,12 +26,68 @@ class PropSimAnalysis:
         self.setdomain()
         self.sedProp = self.set_color_map(color_reference_file)
         self.facies_color = self.set_colorfacies_map(facies_color)
+        self.facies_definition = facies_def_obj
+        self.well_markers = well_markers_data
         self.prop_columns = self.set_proportion_columns()
         self.cell_reference = self.getCellReference()
         self.wells_file = well_files
         self.root_result = self.getRootResultArq()
         self.welldataprop = self.getWellData(self.wells_file, self.extract_columns, self.prop_columns, self.root_result,
                                              self.cell_reference, self.of_type)
+        self.origin = origin_model
+        self.arcfilebase = arcfile
+        self.enginefolder = engine
+        self.runbasemodel()
+
+    def set_facies(self, values, faciesdef):
+        list_dist = []
+        cellf = 'Undetermined'
+        for j, facies in faciesdef.faciesTab.iterrows():
+            test = True
+            dist = 0
+            for prop in values.index:
+                cmin = prop + '_min'
+                cmax = prop + '_max'
+                if cmin not in faciesdef.faciesTab.columns:
+                    continue  # property not used to define facies
+                elif facies[cmin] != None and facies[cmin] > values[prop]:
+                    test = False
+                elif values[prop] > facies[cmax] and facies[cmax] != None:
+                    test = False
+
+            if test:
+                cellf = facies.name
+                list_dist.append(0)
+            if not test:
+                list_dist.append(dist ** (1 / 2.))
+        return cellf, list_dist
+
+    def extract_facies(self):
+        for key, item in self.basemodel_well_data.items():
+            list_f = []
+            for index, cell in item.normdata.iterrows():
+                facies, distances = self.set_facies(cell, self.facies_definition)
+                list_f.append(facies)
+
+            item.normdata['facies'] = list_f
+
+    def runbasemodel(self):
+        Functions.runDionisosSim(self.root, self.enginefolder, self.arcfilebase)
+        self.simdata = Functions.getSimData(self.root, self.arcfilebase, self.origin)
+        self.geowell = Functions.getGeoWellData(self.wells_file, Functions.getMeshCoordinates(self.simdata),
+                                                self.extract_columns, self.well_markers)
+        self.basemodel_well_data = Functions.getSimWellData(self.wells_file, self.root,
+                                                     Functions.getGeoWellRelativePosition(self.geowell),
+                                                     Functions.toWellExtraction(self.root, self.arcfilebase,
+                                                                                self.origin, self.extract_columns),
+                                                     self.facies_definition)
+        self.extract_facies()
+
+        root_result = f"{self.root}//Results//{self.of_type}"
+        os.makedirs(root_result, exist_ok=True)
+        with pd.ExcelWriter(f'{root_result}//Well_sequence_BaseModel.xlsx') as writer:
+            for key, item in self.basemodel_well_data.items():
+                item.normdata.to_excel(writer, sheet_name=key, index=False)
 
     def getCellReference(self):
         if self.of_type == "S":
@@ -602,6 +658,7 @@ class PerfilFacies:
         if any(True for col in file.columns if col == 'Thickness.1'):
             file = file.rename(columns={'Thickness.1': 'Thickness'})
         file = file.iloc[:-1] if self.of_value.upper() == "P" else file
+        file = file[::-1] if self.of_value == "P" else file
         return file
 
 
