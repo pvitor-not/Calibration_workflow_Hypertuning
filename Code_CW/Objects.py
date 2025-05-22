@@ -471,7 +471,7 @@ class Simulated_Well:
 		for var in variables:
 			varids = datatoread[lastpath[var][0]].shape[0]
 			varvalues = datatoread[lastpath[var][1]].shape[0]
-
+			ids_seq = df(datatoread[lastpath[var][0]], columns=['ids'])
 			# Identifying type of variable to be read based on its length so it
 			# can be read correctly.
 
@@ -482,20 +482,24 @@ class Simulated_Well:
 				print(f'Extracting results of {var}: values at each deposition age for well {self.name}.')
 				for i in range(1, len(propertiespath) + 1):
 					datatoread2 = h5py.File(f'{simdir}/{outputfolder}/depouillement/{basefilename}{i}.h5', 'r')
+					datatoread2 = df(datatoread2.get(propertiespath[f'{basefilename}{i}'][var][1]))
 					cumul = []
 					for node in cell[0]:
-						cumul.append(datatoread2.get(propertiespath[f'{basefilename}{i}'][var][1])[node])
+						node = ids_seq['ids'].loc[lambda x: x == node].index[0]
+						cumul.append(datatoread2.loc[node])
 					result = np.array(cumul).mean()
 					welldata[var].append(result)
 
 			elif index == len(propertiespath):
 				welldata[var] = []
 				print(f'Extracting results of {var}: values at final age for well {self.name}.')
-				varvalues = datatoread[lastpath[var][1]]
+				varvalues = df(datatoread[lastpath[var][1]])
 				cumul = []
 				for node in cell[0]:
+					node = ids_seq['ids'].loc[lambda x: x == node].index[0]
 					cumul.append(
-						np.asarray([varvalues[node * len(propertiespath) + i] for i in range(len(propertiespath))]))
+						np.asarray(
+							[float(varvalues.loc[node * len(propertiespath) + i]) for i in range(len(propertiespath))]))
 				result = np.array(cumul).mean(axis=0)
 				welldata[var] = result
 
@@ -504,11 +508,12 @@ class Simulated_Well:
 				varvalues = np.array(datatoread[lastpath[var][1]])
 				thickness_values = np.array(datatoread[lastpath['OutputStratigraphicThickness'][1]])
 				varvalues = varvalues.reshape(int(len(varvalues) / nsedclasses), nsedclasses)
-
 				cumul = []
 				cumul_thickness = np.array([0. for x in propertiespath])
 				for node in cell[0]:
-					thickness = np.asarray([thickness_values[node * len(propertiespath) + i] for i in range(len(propertiespath))])
+					node = ids_seq['ids'].loc[lambda x: x == node].index[0]
+					thickness = np.asarray(
+						[thickness_values[node * len(propertiespath) + i] for i in range(len(propertiespath))])
 					cumul_thickness += thickness
 					concentration = np.array(varvalues[node * len(propertiespath): (node + 1) * len(propertiespath)])
 					cumul.append(np.multiply(concentration.T, thickness).T)
@@ -521,31 +526,33 @@ class Simulated_Well:
 		for prop, values in welldata.items():
 			well_data_final[prop] = values
 
-	#Depth "Post Processing"
+		# Depth "Post Processing"
 		bottom = list(well_data_final['OutputBasement'])
 		bottom.reverse()
-		#Initializing: Only first values matter, other will be corrected below
+		# Initializing: Only first values matter, other will be corrected below
 		well_data_final['Z(Bottom)'] = [-x for x in bottom]
 		well_data_final['Z(Top)'] = well_data_final['Z(Bottom)'] - well_data_final['OutputStratigraphicThickness']
-		well_data_final['Z(Center)'] = (well_data_final['Z(Bottom)'] + well_data_final['Z(Top)'])/2
+		well_data_final['Z(Center)'] = (well_data_final['Z(Bottom)'] + well_data_final['Z(Top)']) / 2
 		for i in range(1, len(well_data_final['OutputBasement'])):
-			well_data_final['Z(Bottom)'].loc[i] = well_data_final['Z(Top)'].loc[i-1]
-			well_data_final['Z(Top)'].loc[i] = well_data_final['Z(Top)'].loc[i-1] - well_data_final['OutputStratigraphicThickness'].loc[i]
-			well_data_final['Z(Center)'].loc[i] = (well_data_final['Z(Bottom)'].loc[i] + well_data_final['Z(Top)'].loc[i]) / 2
+			well_data_final['Z(Bottom)'].loc[i] = well_data_final['Z(Top)'].loc[i - 1]
+			well_data_final['Z(Top)'].loc[i] = well_data_final['Z(Top)'].loc[i - 1] - \
+											   well_data_final['OutputStratigraphicThickness'].loc[i]
+			well_data_final['Z(Center)'].loc[i] = (well_data_final['Z(Bottom)'].loc[i] + well_data_final['Z(Top)'].loc[
+				i]) / 2
 		well_data_final['Depth'] = -well_data_final['Z(Top)']
 
-		#Discarding Overburden
+		# Discarding Overburden
 		if len(timesteps) != len(propertiespath):
-			well_data_final.drop(well_data_final.tail(1).index,inplace=True)
+			well_data_final.drop(well_data_final.tail(1).index, inplace=True)
 			print("\n\nOverburden succesfully applied. Dephts were adjusted and Overburden data discarded.")
 
 		else:
 			print("\n\nWARNING: Theres no Overburden to discard. Maybe there's a mismatch on your simulated depth data.")
 
 		for prop, values in well_data_final.items():
-		#Excluding Output from properties names
+			# Excluding Output from properties names
 			if 'Output' in prop:
-				prop_corr = prop.replace('Output','')
+				prop_corr = prop.replace('Output', '')
 				del well_data_final[prop]
 			else:
 				prop_corr = prop
