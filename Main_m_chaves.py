@@ -24,7 +24,7 @@ root_folder = r"C:\Users\04099305201\Desktop\Modelos Dionisos"
 
 ## Calibration case folder ##
 
-case = "PROOF_faciesdefinition"
+case = "FinalTest_cw"
 
 ### General Inputs ###
 ## Absolute initial coordinates of the project's grid defined on Dionisos interface ##
@@ -100,8 +100,8 @@ internal_optimizer = Functions.get_optimizer(internal_optimization_method)
 external_optimizer = Functions.get_optimizer(external_optimization_method)
 
 ## Population Size and Number of Iterations performed by calibration method ##
-pop_size = 5  # Population size
-max_iter = 5  # Maximum number of Iterations (Termination criterion)
+pop_size = 1  # Population size
+max_iter = 1  # Maximum number of Iterations (Termination criterion)
 
 ## Genetic Algorithm Aditional Parameters ##
 mutation_prob = 0.05  # Mutation Probability
@@ -139,7 +139,12 @@ Sim_Analysis_Prop = Sim_PostProcessingAnalysis.PropSimAnalysis(root=simdir, of_t
                                                                domain=domain,
                                                                extract_columns=extract_columns,
                                                                color_reference_file=color_ref_file,
-                                                               facies_color=color_facies_file)
+                                                               facies_color=color_facies_file,
+                                                               facies_def_obj=facies_definition,
+                                                               well_markers_data=well_markers_file,
+                                                               origin_model=origin,
+                                                               arcfile=arcfilebase,
+                                                               engine=enginefolder)
 
 Sim_Analysis_Prop.wellPieCharts(Sim_Analysis_Prop.welldataprop, Sim_Analysis_Prop.id_table,
                                 Sim_Analysis_Prop.sedProp)
