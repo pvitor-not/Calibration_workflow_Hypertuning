@@ -1,3 +1,20 @@
+#Import libraries
+import Code_CW.Functions as Functions
+import pandas as pd
+from pandas import DataFrame as df
+from bs4 import BeautifulSoup as bf
+import os
+import pathlib
+import lasio
+import h5py
+import numpy as np
+from prettytable import PrettyTable
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+import matplotlib.pyplot as plt
+import matplotlib
+import warnings
+import pathvalidate
+
 class FaciesAnalysis:
 	def __init__(self, root, wells_dir, markers_file, extract_columns, domain, color_reference_file):
 		warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -589,9 +606,8 @@ class SensitivityAnalysis:
 
 	def plotGlobalSimsOFs(self, ofs_to_excel, oFfolder, param_table_to_plot, wellofs_results):
 		for param in param_table_to_plot:
-
-			if os.path.isdir(f'{self.simdir}\Sens_Results\{oFfolder}\{param}') == False:
-				os.makedirs(f'{self.simdir}\Sens_Results\{oFfolder}\{param}')
+			if os.path.isdir(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{pathvalidate.sanitize_filename(param)}') == False:
+				os.makedirs(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{pathvalidate.sanitize_filename(param)}')
 			ofs_to_excel = ofs_to_excel.sort_values(by=f'{param}')
 			sims = []
 			for sim in ofs_to_excel['simulations']:
@@ -615,7 +631,7 @@ class SensitivityAnalysis:
 				ax.annotate(txt, (x[i], y[i]), horizontalalignment='center', verticalalignment='top', xytext=(0, 15),
 							size=10, textcoords='offset points')
 
-			plt.savefig(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{param}\\{oFfolder}_values.png')
+			plt.savefig(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{pathvalidate.sanitize_filename(param)}\\{oFfolder}_values.png')
 			plt.close()
 
 	def uncertainty_values_processing(self,uncertainty):
@@ -658,19 +674,19 @@ class SensitivityAnalysis:
 				uncertainty.loc[i,'MAX'] = ','.join(ts_values)
 				i += 1
 
-			elif uncertainty.loc[i].loc['Type'] =='Map':
+			elif uncertainty.loc[i]['Type'] =='Map':
 				ts_values = uncertainty.loc[i].loc['DEF_VALUES'].split("],[")
 				ts_values = ts_values[0].replace('[[','')
 				initial_value = float(ts_values.split(',')[0])
-				uncertainty.loc[i].loc['DEF_VALUES'] = 1
+				uncertainty.at[i,'DEF_VALUES'] = 1
 				ts_values = uncertainty.loc[i].loc['MIN'].split("],[")
 				ts_values = ts_values[0].replace('[[', '')
 				minimum = float(ts_values.split(',')[0])
-				uncertainty.loc[i].loc['MIN'] = minimum/initial_value
+				uncertainty.at[i,'MIN'] = minimum/initial_value
 				ts_values = uncertainty.loc[i].loc['MAX'].split("],[")
 				ts_values = ts_values[0].replace('[[', '')
 				maximum = float(ts_values.split(',')[0])
-				uncertainty.loc[i].loc['MAX'] = maximum/initial_value
+				uncertainty.at[i,'MAX'] = maximum/initial_value
 				i += 1
 			else:
 				i += 1
@@ -760,7 +776,7 @@ class SensitivityAnalysis:
 				ranges = self.params_def(mins, inits, maxs)
 			ranges_to_plot = self.params_def(plot_params.loc[idx]['MIN'],plot_params.loc[idx]['DEF_VALUES'],plot_params.loc[idx]['MAX'])
 			for i in range(len(self.experimental)):
-				if self.experimental.loc[i][param] >= -1  and self.experimental.loc[i][param] <= 1:
+				if float(self.experimental.loc[i][param]) >= -1  and float(self.experimental.loc[i][param]) <= 1:
 					value = self.interpol(ranges,self.experimental.loc[i][param])
 					full_param_value.append(str(value))
 					value_to_plot = self.interpol(ranges_to_plot, self.experimental.loc[i][param])
@@ -871,7 +887,7 @@ class SensitivityAnalysis:
 			plt.xlabel(f'{param}')
 			plt.ylabel(f'Wells OF values')
 			plt.title(f'Wells OF values versus {param}')
-			plt.savefig(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{param}\WellOFs_vs{param}_values.png')
+			plt.savefig(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{pathvalidate.sanitize_filename(param)}\WellOFs_vs{pathvalidate.sanitize_filename(param)}_values.png')
 			plt.close()
 
 	def processingSCOOFcontribution(self):
@@ -914,7 +930,7 @@ class SensitivityAnalysis:
 			n = [str(t) for t in sims]
 			for i, txt in enumerate(n):
 				ax.annotate(txt, (x[i], y[i]),horizontalalignment='center', verticalalignment='top',xytext=(0,15), size = 10, textcoords='offset points')
-			plt.savefig(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{param}\\{oFfolder}_Global_Facies_Contribution_vs_{param}.png')
+			plt.savefig(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{pathvalidate.sanitize_filename(param)}\\{oFfolder}_Global_Facies_Contribution_vs_{pathvalidate.sanitize_filename(param)}.png')
 			plt.close()
 
 		thickness_terms_to_plot = pd.concat([thickness_terms_to_plot, param_table_to_plot, ofs_to_excel['simulations']], axis =1)
@@ -939,7 +955,7 @@ class SensitivityAnalysis:
 			n = [str(t) for t in sims]
 			for i, txt in enumerate(n):
 				ax.annotate(txt, (x[i], y[i]),horizontalalignment='center', verticalalignment='top',xytext=(0,15), size = 10, textcoords='offset points')
-			plt.savefig(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{param}\\{oFfolder}_Global_Thickness_Contribution_vs_{param}.png')
+			plt.savefig(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{pathvalidate.sanitize_filename(param)}\\{oFfolder}_Global_Thickness_Contribution_vs_{pathvalidate.sanitize_filename(param)}.png')
 			plt.close()
 
 	def plotWellsContributions(self, oFfolder, ofs_to_excel, param_table_to_plot, facies_terms_to_plot, thickness_terms_to_plot):
@@ -958,7 +974,7 @@ class SensitivityAnalysis:
 			plt.xlabel(f'{param}')
 			plt.ylabel(f'Wells Facies Contribution')
 			plt.title(f'Wells Facies Contribution versus {param}')
-			plt.savefig(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{param}\\{oFfolder}_Wells_Facies_Contribution_vs_{param}.png')
+			plt.savefig(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{pathvalidate.sanitize_filename(param)}\\{oFfolder}_Wells_Facies_Contribution_vs_{pathvalidate.sanitize_filename(param)}.png')
 			plt.close()
 
 		thickness_terms_to_plot = pd.concat([thickness_terms_to_plot, param_table_to_plot, ofs_to_excel['simulations']], axis=1)
@@ -976,5 +992,5 @@ class SensitivityAnalysis:
 			plt.xlabel(f'{param}')
 			plt.ylabel(f'Wells Thickness Contribution')
 			plt.title(f'Wells Thickness Contribution versus {param}')
-			plt.savefig(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{param}\\{oFfolder}_Wells_Thickness_Contribution_vs_{param}.png')
+			plt.savefig(f'{self.simdir}\\Sens_Results\\{oFfolder}\\{pathvalidate.sanitize_filename(param)}\\{oFfolder}_Wells_Thickness_Contribution_vs_{pathvalidate.sanitize_filename(param)}.png')
 			plt.close()

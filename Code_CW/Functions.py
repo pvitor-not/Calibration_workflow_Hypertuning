@@ -15,13 +15,13 @@ import re
 from Code_CW import Dijkstra
 from scipy.sparse.csgraph import dijkstra
 from scipy.sparse import coo_matrix
-import Code_CW.Objects as Objects
+from Code_CW import Objects
 from pyswarm import pso
 import sys
 import matplotlib.pyplot as plt
-import Code_CW.Optimizer as Optimizer
-import Code_CW.ObjectiveFunction as ObjectiveFunction
-import Code_CW.xml_parser as xml_parser
+from Code_CW import Optimizer
+from Code_CW import ObjectiveFunction
+from Code_CW import xml_parser
 
 
 def getArcInput(simdir: str):

@@ -340,7 +340,7 @@ class Geological_Well:
 						the second information (n) is the number of data defining the cell
 		"""
 		 
-		new_table = np.asarray(pd.get_dummies(self.sequence['facies']) * np.array(self.sequence['Thickness'][:, None]))
+		new_table = np.asarray(pd.get_dummies(self.sequence['facies']) * np.expand_dims(self.sequence['Thickness'], axis=1))
 
 		# initializing the matrix of all possibles cells within the well
 		hiatus = np.array([0 for f in range(len(self.facies_list))])			# cells without thickness (geological unconformity)
@@ -351,7 +351,7 @@ class Geological_Well:
 		geocells = []
 		# creation of the matrix of possible cells
 		for top_marker in range(self.nb_data+1):
-			geothick.append([0] + list(all_thicknesses[top_marker:].cumsum()))
+			geothick.append([0] + [round(float(val), 2) for val in all_thicknesses[top_marker:].cumsum()])
 			geocells.append(np.vstack((unique_cells[max(0, top_marker - 1)], unique_cells[top_marker:].cumsum(axis=0))))
 			geocells[top_marker][1:] = np.divide(geocells[top_marker][1:].T,geothick[top_marker][1:]).T
 
@@ -498,8 +498,7 @@ class Simulated_Well:
 				for node in cell[0]:
 					node = ids_seq['ids'].loc[lambda x: x == node].index[0]
 					cumul.append(
-						np.asarray(
-							[float(varvalues.loc[node * len(propertiespath) + i]) for i in range(len(propertiespath))]))
+						np.asarray([float(varvalues.loc[node * len(propertiespath) + i]) for i in range(len(propertiespath))]))
 				result = np.array(cumul).mean(axis=0)
 				welldata[var] = result
 
@@ -532,18 +531,16 @@ class Simulated_Well:
 		# Initializing: Only first values matter, other will be corrected below
 		well_data_final['Z(Bottom)'] = [-x for x in bottom]
 		well_data_final['Z(Top)'] = well_data_final['Z(Bottom)'] - well_data_final['OutputStratigraphicThickness']
-		well_data_final['Z(Center)'] = (well_data_final['Z(Bottom)'] + well_data_final['Z(Top)']) / 2
+		well_data_final['Z(Center)'] = (well_data_final['Z(Bottom)'] + well_data_final['Z(Top)'])/2
 		for i in range(1, len(well_data_final['OutputBasement'])):
-			well_data_final['Z(Bottom)'].loc[i] = well_data_final['Z(Top)'].loc[i - 1]
-			well_data_final['Z(Top)'].loc[i] = well_data_final['Z(Top)'].loc[i - 1] - \
-											   well_data_final['OutputStratigraphicThickness'].loc[i]
-			well_data_final['Z(Center)'].loc[i] = (well_data_final['Z(Bottom)'].loc[i] + well_data_final['Z(Top)'].loc[
-				i]) / 2
+			well_data_final['Z(Bottom)'].loc[i] = well_data_final['Z(Top)'].loc[i-1]
+			well_data_final['Z(Top)'].loc[i] = well_data_final['Z(Top)'].loc[i-1] - well_data_final['OutputStratigraphicThickness'].loc[i]
+			well_data_final['Z(Center)'].loc[i] = (well_data_final['Z(Bottom)'].loc[i] + well_data_final['Z(Top)'].loc[i]) / 2
 		well_data_final['Depth'] = -well_data_final['Z(Top)']
 
 		# Discarding Overburden
 		if len(timesteps) != len(propertiespath):
-			well_data_final.drop(well_data_final.tail(1).index, inplace=True)
+			well_data_final.drop(well_data_final.tail(1).index,inplace=True)
 			print("\n\nOverburden succesfully applied. Dephts were adjusted and Overburden data discarded.")
 
 		else:
