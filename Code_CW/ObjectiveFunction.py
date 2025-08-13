@@ -7,7 +7,7 @@ import numpy as np
 import math
 import os
 import pandas as pd
-#from scipy.stats.stats import _ttest_finish
+from scipy.stats.stats import _ttest_finish
 from scipy.stats import ttest_ind
 from scipy.stats import ttest_ind_from_stats
 from scipy import stats
