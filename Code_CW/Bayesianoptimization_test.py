@@ -12,6 +12,12 @@ import shutil
 import Code_CW.Objects as Objects
 import Code_CW.Functions as Functions
 
+# NOVAS IMPORTAÇÕES
+from skopt import gp_minimize
+from skopt.space import Real
+from skopt.utils import use_named_args
+import matplotlib.pyplot as plt # Para o gráfico de convergência
+
 #########################
 tic = time.time()
 #########################
@@ -32,7 +38,7 @@ root_folder = r"C:\Users\00584647271\Desktop\diretorio"
 #root_folder = "C:\\Users\\45597483811\\PycharmProjects\\Calibration_workflow_v2.0_refatorado"
 
 ### STUDY CASE
-case = "Hypertuning"
+case = "Hypertuning_Bayesian_optimized"
 
 ### DIONISOS PROJECT INPUT
 # Absolute initial coordinates of the project's grid defined on Dionisos interface.
@@ -95,85 +101,58 @@ alpha = 4
 beta = 1
                                         #PROOF PARAMETER TO SET REFERENCE SOLUTION
 
-pop_size = 5 # Population size
-max_iter = 5  # Maximum number of iterations (termination criterion)
+pop_size = 1 # Population size
+max_iter = 1 # Maximum number of iterations (termination criterion)
+
 
 # ==========================================================
-""" DEFINA SEU MÉTODO DE CALIBRAÇÃO AQUI: 'G' para Grid Search, 'R' para Random Search"""
-CALIBRATION_METHOD = 'G'
+""" DEFINA SEU MÉTODO DE CALIBRAÇÃO AQUI """
+# REMOVA O BLOCO DE GRID/RANDOM SEARCH
+# if CALIBRATION_METHOD == 'G':
+#     ...
+# elif CALIBRATION_METHOD == 'R':
+#     ...
 # ==========================================================
 
-if CALIBRATION_METHOD == 'G':
-    print("Usando o método: Grid Search")
+# 1. DEFINA O ESPAÇO DE BUSCA PARA A OTIMIZAÇÃO BAYESIANA
+search_space = [
+    Real(0.0, 1.0, name='omega'),
+    Real(0.0, 1.0, name='phip'),
+    Real(0.0, 1.0, name='phig'),
+]
 
-    ## --- GRID SEARCH ---
-    # param_grid = {
-    #     'omega': [0, 0.25, 0.5, 0.75, 1],
-    #     'phip': [0, 0.25, 0.5, 0.75, 1],
-    #     'phig': [0, 0.25, 0.5, 0.75, 1],
-    # }
-    param_grid = {
-        'omega': [0, 1],
-        'phip': [0, 1],
-        'phig': [0, 1],
-    }
-    # Gera o DataFrame com TODAS as combinações da grade
-    df = pd.DataFrame(list(ParameterGrid(param_grid)))
+# 2. CRIE UMA LISTA PARA ARMAZENAR OS RESULTADOS DE CADA CHAMADA
+results_list = []
+# Contador global para nomear as pastas de resultado de forma única
+run_counter = 0
 
-elif CALIBRATION_METHOD == 'R':
-    print("Usando o método: Random Search")
 
-    ## --- RANDOM SEARCH ---
-    # Defina o número de iterações desejado para o Random Search
-    N_ITER_RANDOM = 5
+# 3. CRIE A FUNÇÃO OBJETIVO QUE SERÁ CHAMADA PELO gp_minimize
 
-    param_dist = {
-        'omega': uniform(0, 1),
-        'phip': uniform(0, 1),
-        'phig': uniform(0, 1),
-    }
-    # Gera N_ITER_RANDOM combinações aleatórias
-    random_combinations = list(ParameterSampler(param_dist, n_iter=N_ITER_RANDOM, random_state=42))
-    combinations = [{k: round(v, 2) for k, v in params.items()} for params in random_combinations]
-    df = pd.DataFrame(combinations)
+@use_named_args(search_space)
+def objective_function(omega, phip, phig):
+    """
+    Esta função executa UMA simulação completa com um conjunto de hiperparâmetros
+    e retorna o valor da função objetivo (OF_value) para ser minimizado.
+    """
+    global run_counter
+    run_counter += 1
 
-else:
-    raise ValueError("CALIBRATION_METHOD deve ser 'G' (Grid Search) ou 'R' (Random Search).")
+    print(f"\n--- Iniciando Iteração Bayesiana Nº {run_counter} ---")
+    print(f"Parâmetros: omega={omega:.3f}, phip={phip:.3f}, phig={phig:.3f}")
 
-# O DataFrame 'df' agora está pronto para o loop de simulação
-print(f"Total de combinações geradas: {len(df)}")
+    # Definição da pasta de destino para esta combinação
+    results_folder_final = os.path.join(simdir, f"Results_{run_counter}")
+    default_results_folder = os.path.join(simdir, "Results")
 
-#######################################################################################################################
-
-### LOOP DE SIMULAÇÃO ###
-output_file = os.path.join(root_folder, case, "calibration_results.xlsx")
-
-df['OF_value'] = None
-df['time_h'] = None
-for PV in uncertain_parameters["uncertain_parameter"]:
-    df[PV] = None
-
-# Define o caminho padrão de saída do simulador
-default_results_folder = os.path.join(simdir, "Results")
-
-for idx, row in df.iterrows():
-    omega = row['omega']
-    phip = row['phip']
-    phig = row['phig']
-
-    #Definição da pasta de destino para esta combinação
-    results_folder_final = os.path.join(simdir, f"Results_{idx + 1}")
-
-    #Limpeza: Garante que a pasta de destino não existe
+    # Limpeza de pastas
     if os.path.exists(results_folder_final):
         shutil.rmtree(results_folder_final)
-
-    #Limpa a pasta padrão de saída, caso o Dionisos não a sobrescreva corretamente
     if os.path.exists(default_results_folder):
         shutil.rmtree(default_results_folder)
 
+    # A lógica abaixo é a mesma do seu loop 'for' original
     simulation = Objects.Simulation_parameters()
-
     internal_optimizer = Functions.get_optimizer(internal_optimization_method)
     external_optimizer = Functions.get_optimizer(external_optimization_method)
 
@@ -183,12 +162,11 @@ for idx, row in df.iterrows():
                               litho_class_ids=litho_class_ids, carbo_ids=carbo_ids, mud_ids=mud_text_ids,
                               sand_ids=sand_text_ids, gravel_ids=gravel_text_ids,
                               alpha=alpha, beta=beta,
-                              internal_optimization_method=internal_optimization_method)  # alpha and beta must be a fixed number or zero to use the weighting equations
+                              internal_optimization_method=internal_optimization_method)
     OF.set_optmization(uncertain_parameters, enginefolder, internal_optimizer, external_optimizer,
                        reference_value=[])
 
-
-    tic = time.time()
+    tic_run = time.time()
     best_variable, OF_value = external_optimizer.optimize(
         OF.compute,
         uncertain_parameters['min_value'].to_numpy(),
@@ -197,55 +175,108 @@ for idx, row in df.iterrows():
         max_iter,
         [omega, phip, phig]
     )
-    tac = time.time() - tic
+    tac_run = time.time() - tic_run
 
-    # ==========================================================
-    # # GERENCIAMENTO E PROCESSAMENTO DE RESULTADOS
-    # ==========================================================
-
-    # O Functions.plotResults precisa rodar AGORA, enquanto a pasta se chama 'Results'
-    # Ele gera os gráficos dentro de 'simdir/Results/S' ou 'simdir/Results/P'
+    # Processamento de resultados (igual ao seu código)
     Functions.plotResults(OF_type, simulation, simdir)
-
-    #LIMPEZA DE ARQUIVOS EXCEL (Novo Passo)
-    if os.path.exists(default_results_folder):
-        print(f"Iniciando limpeza de arquivos Excel para a combinação {idx + 1}...")
-
-        # Percorre a pasta principal ('Results') e todas as subpastas (como a pasta 'S')
-        for root, dirs, files in os.walk(default_results_folder, topdown=False):
-            for name in files:
-                # Verifica se o arquivo termina com .xlsx ou .xls
-                if name.endswith(('.xlsx', '.xls')):
-                    os.remove(os.path.join(root, name))
-        print("Limpeza concluída.")
-
-    #Move e renomeia a pasta 'Results' (agora limpa) para 'Results_X'
+    # Limpeza de arquivos Excel
+    # if os.path.exists(default_results_folder):
+    #     for root, dirs, files in os.walk(default_results_folder, topdown=False):
+    #         for name in files:
+    #             if name.endswith(('.xlsx', '.xls')):
+    #                 os.remove(os.path.join(root, name))
+    # Mover pasta de resultados
     if os.path.exists(default_results_folder):
         shutil.move(default_results_folder, results_folder_final)
-    else:
-        print(
-            f"Aviso: Pasta de resultados padrão '{default_results_folder}' não encontrada após a otimização {idx + 1}. Verifique a simulação.")
 
-    # ==========================================================
-
-    #Continua a atualização do DataFrame
+    # Armazenar resultados desta iteração
+    current_result = {
+        'Combination': run_counter,
+        'omega': omega,
+        'phip': phip,
+        'phig': phig,
+        'OF_value': OF_value,
+        'time_h': tac_run / 3600
+    }
     for param_name, param_value in zip(uncertain_parameters["uncertain_parameter"], best_variable):
-        df.at[idx, param_name] = param_value
-    df.at[idx, 'OF_value'] = OF_value
-    df.at[idx, 'time_h'] = tac / 3600  # Tempo em horas
+        current_result[param_name] = param_value
 
-    print("Computation time calibration:", tac, "s")
-    print("The best parameter set is: ", best_variable)
-    print("With a OF value of: ", OF_value)
+    results_list.append(current_result)
 
-    #SALVAMENTO PARCIAL
-    df.insert(0, "Combination", range(1, len(df) + 1)) if "Combination" not in df.columns else None
-    df.to_excel(output_file, index=False)
-    print(f"\nResultados parciais salvos em: {output_file}")
+    # # Salva um backup a cada iteração
+    # df_results = pd.DataFrame(results_list)
+    # output_file = os.path.join(root_folder, case, "calibration_results_bayesian.xlsx")
+    # df_results.to_excel(output_file, index=False)
 
-# Fim do loop
-print(f"\nResultados salvos em: {output_file}")
+    print(f"Tempo da iteração: {tac_run:.2f} s | OF_value: {OF_value:.4f}")
+    print(f"Melhor conjunto de parâmetros encontrado: {best_variable}")
+    print(f"--- Fim da Iteração Nº {run_counter} ---")
 
-    #######
+    # A função DEVE retornar o valor a ser minimizado
+    return OF_value
+
+# =====================================================================================================================
+"""REMOVA TODO O SEU ANTIGO LOOP DE SIMULAÇÃO "for idx, row in df.iterrows():"""
+# =====================================================================================================================
+
+
+# 4. EXECUTE A OTIMIZAÇÃO BAYESIANA
+N_CALLS = 10 # Número total de simulações a serem executadas (ajuste conforme necessário)
+print(f"\nIniciando Otimização Bayesiana com {N_CALLS} chamadas...")
+
+result_bayesian = gp_minimize(
+    func=objective_function,
+    dimensions=search_space,
+    n_calls=N_CALLS,
+    verbose=True
+)
+
+# 5. PROCESSAR E EXIBIR OS RESULTADOS FINAIS
+print("\n--- Otimização Bayesiana Concluída ---")
+print(f"Melhor valor de OF encontrado: {result_bayesian.fun:.4f}")
+print("Melhores hiperparâmetros (omega, phip, phig):")
+best_hyperparams = {name: val for name, val in zip(['omega', 'phip', 'phig'], result_bayesian.x)}
+print(best_hyperparams)
+
+# Salvar o DataFrame final com todos os resultados
+output_file = os.path.join(root_folder, case, "calibration_results_bayesian.xlsx")
+final_df = pd.DataFrame(results_list)
+final_df.to_excel(output_file, index=False)
+print(f"\nResultados completos salvos em: {output_file}")
+
+# Opcional: Plotar a convergência
+from skopt.plots import plot_convergence
+
+plot_convergence(result_bayesian)
+convergence_plot_path = os.path.join(root_folder, case, "convergence_plot.png")
+plt.savefig(convergence_plot_path)
+# print(f"Gráfico de convergência salvo em: {convergence_plot_path}")
+# plt.show()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 

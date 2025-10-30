@@ -48,6 +48,21 @@ class Genetic_Algorithm(Optimizer):
 
 		return model.best_variable, model.best_function
 
+# class Particle_Swarm_Optimization(Optimizer):
+#
+# 	def optimize(self, function, min_value, max_value, pop_size, max_iter, args=None):
+# 		"""
+# 		Method to optimize the compute process using the particle swarm optimization
+#
+# 		Returns the min OF value in float format and the respective cells in np.array format
+# 		"""
+# 		best_variable, OF = pso(function, min_value, max_value, ieqcons=[], f_ieqcons=None,
+# 								args=(), kwargs={},
+# 								swarmsize=pop_size, omega=0.7, phip=0.55, phig=0.65, maxiter=max_iter, minstep=1e-7,
+# 								minfunc=1e-8, debug=False)
+# 		return best_variable, OF
+
+
 class Particle_Swarm_Optimization(Optimizer):
 
 	def optimize(self, function, min_value, max_value, pop_size, max_iter, args=None):
@@ -56,11 +71,15 @@ class Particle_Swarm_Optimization(Optimizer):
 
 		Returns the min OF value in float format and the respective cells in np.array format
 		"""
+		omegavalue = args[0]
+		phipvalue = args[1]
+		phigvalue = args[2]
 		best_variable, OF = pso(function, min_value, max_value, ieqcons=[], f_ieqcons=None,
 								args=(), kwargs={},
-								swarmsize=pop_size, omega=0.7, phip=0.55, phig=0.65, maxiter=max_iter, minstep=1e-7,
+								swarmsize=pop_size, omega=omegavalue, phip=phipvalue, phig=phigvalue, maxiter=max_iter, minstep=1e-7,
 								minfunc=1e-8, debug=False)
 		return best_variable, OF
+
 
 class SCOOF_Brute_Force(Optimizer):
 

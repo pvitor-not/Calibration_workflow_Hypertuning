@@ -20,11 +20,11 @@ tic = time.time()
 enginefolder = r'"C:\Program Files\Beicip\OpenFlowSuite_2023\WfEngine\plugins\fr.ifp.dionisosflow.arcades.engine.win64_15.1.0.r27540\windows\ArcaDESLauncher.exe"'
 
 ## Working path containing your calibration/analysis cases ##
-root_folder = r"C:\Users\04099305201\Desktop\Modelos Dionisos"
+root_folder = r"C:\Users\00584647271\Desktop\diretorio"
 
 ## Calibration case folder ##
 
-case = "FinalTest_cw"
+case = "benchmark"
 
 ### General Inputs ###
 ## Absolute initial coordinates of the project's grid defined on Dionisos interface ##
