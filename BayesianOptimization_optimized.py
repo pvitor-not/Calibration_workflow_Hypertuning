@@ -1,0 +1,1 @@
+#Tentativa de implementar um código mais rápido>>>
