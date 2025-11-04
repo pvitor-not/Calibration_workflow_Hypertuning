@@ -38,7 +38,7 @@ root_folder = r"C:\Users\00584647271\Desktop\diretorio"
 #root_folder = "C:\\Users\\45597483811\\PycharmProjects\\Calibration_workflow_v2.0_refatorado"
 
 ### STUDY CASE
-case = "Hypertuning_Bayesian_optimized"
+case = "Hypertuning_test_final"
 
 ### DIONISOS PROJECT INPUT
 # Absolute initial coordinates of the project's grid defined on Dionisos interface.
@@ -106,52 +106,46 @@ max_iter = 1 # Maximum number of iterations (termination criterion)
 
 
 # ==========================================================
-""" DEFINA SEU MÉTODO DE CALIBRAÇÃO AQUI """
-# REMOVA O BLOCO DE GRID/RANDOM SEARCH
-# if CALIBRATION_METHOD == 'G':
-#     ...
-# elif CALIBRATION_METHOD == 'R':
-#     ...
+""" CALIBRATION METHOD: 
+    -> BayesianOptimization"""
 # ==========================================================
 
-# 1. DEFINA O ESPAÇO DE BUSCA PARA A OTIMIZAÇÃO BAYESIANA
+# Define the search space for Bayesian optimization.
 search_space = [
     Real(0.0, 1.0, name='omega'),
     Real(0.0, 1.0, name='phip'),
     Real(0.0, 1.0, name='phig'),
 ]
 
-# 2. CRIE UMA LISTA PARA ARMAZENAR OS RESULTADOS DE CADA CHAMADA
+# List for storing the results of each call.
 results_list = []
-# Contador global para nomear as pastas de resultado de forma única
+
 run_counter = 0
 
-
-# 3. CRIE A FUNÇÃO OBJETIVO QUE SERÁ CHAMADA PELO gp_minimize
-
+#The objective function that will be called by gp_minimize.
 @use_named_args(search_space)
 def objective_function(omega, phip, phig):
     """
-    Esta função executa UMA simulação completa com um conjunto de hiperparâmetros
-    e retorna o valor da função objetivo (OF_value) para ser minimizado.
+    This function performs a complete simulation with a set of hyperparameters
+    and returns the objective function value (OF_value) to be minimized.
     """
     global run_counter
     run_counter += 1
 
-    print(f"\n--- Iniciando Iteração Bayesiana Nº {run_counter} ---")
-    print(f"Parâmetros: omega={omega:.3f}, phip={phip:.3f}, phig={phig:.3f}")
+    print(f"\n--- Initiating Bayesian Iteration Nº {run_counter} ---")
+    print(f"Parameters: omega={omega:.3f}, phip={phip:.3f}, phig={phig:.3f}")
 
-    # Definição da pasta de destino para esta combinação
+    # Defining the destination folder for this combination
     results_folder_final = os.path.join(simdir, f"Results_{run_counter}")
     default_results_folder = os.path.join(simdir, "Results")
 
-    # Limpeza de pastas
+    # Folder cleaning
     if os.path.exists(results_folder_final):
         shutil.rmtree(results_folder_final)
     if os.path.exists(default_results_folder):
         shutil.rmtree(default_results_folder)
+    #
 
-    # A lógica abaixo é a mesma do seu loop 'for' original
     simulation = Objects.Simulation_parameters()
     internal_optimizer = Functions.get_optimizer(internal_optimization_method)
     external_optimizer = Functions.get_optimizer(external_optimization_method)
@@ -177,19 +171,19 @@ def objective_function(omega, phip, phig):
     )
     tac_run = time.time() - tic_run
 
-    # Processamento de resultados (igual ao seu código)
+    # Result processing
     Functions.plotResults(OF_type, simulation, simdir)
-    # Limpeza de arquivos Excel
+    # Cleaning Excel files
     # if os.path.exists(default_results_folder):
     #     for root, dirs, files in os.walk(default_results_folder, topdown=False):
     #         for name in files:
     #             if name.endswith(('.xlsx', '.xls')):
     #                 os.remove(os.path.join(root, name))
-    # Mover pasta de resultados
+    # Move results folder
     if os.path.exists(default_results_folder):
         shutil.move(default_results_folder, results_folder_final)
 
-    # Armazenar resultados desta iteração
+    # Store the results of this iteration.
     current_result = {
         'Combination': run_counter,
         'omega': omega,
@@ -203,26 +197,21 @@ def objective_function(omega, phip, phig):
 
     results_list.append(current_result)
 
-    # # Salva um backup a cada iteração
+    # # Save a backup at each iteration.
     # df_results = pd.DataFrame(results_list)
     # output_file = os.path.join(root_folder, case, "calibration_results_bayesian.xlsx")
     # df_results.to_excel(output_file, index=False)
 
-    print(f"Tempo da iteração: {tac_run:.2f} s | OF_value: {OF_value:.4f}")
-    print(f"Melhor conjunto de parâmetros encontrado: {best_variable}")
-    print(f"--- Fim da Iteração Nº {run_counter} ---")
+    print(f"Iteration time: {tac_run:.2f} s | OF_value: {OF_value:.4f}")
+    print(f"Best set of parameters found: {best_variable}")
+    print(f"--- End of Iteration Nº {run_counter} ---")
 
-    # A função DEVE retornar o valor a ser minimizado
     return OF_value
 
 # =====================================================================================================================
-"""REMOVA TODO O SEU ANTIGO LOOP DE SIMULAÇÃO "for idx, row in df.iterrows():"""
-# =====================================================================================================================
-
-
-# 4. EXECUTE A OTIMIZAÇÃO BAYESIANA
-N_CALLS = 10 # Número total de simulações a serem executadas (ajuste conforme necessário)
-print(f"\nIniciando Otimização Bayesiana com {N_CALLS} chamadas...")
+# Bayesian Optimization
+N_CALLS = 10 # Total number of simulations to be run (adjust as needed)
+print(f"\nStarting Bayesian Optimization with {N_CALLS} calls...")
 
 result_bayesian = gp_minimize(
     func=objective_function,
@@ -231,26 +220,26 @@ result_bayesian = gp_minimize(
     verbose=True
 )
 
-# 5. PROCESSAR E EXIBIR OS RESULTADOS FINAIS
-print("\n--- Otimização Bayesiana Concluída ---")
-print(f"Melhor valor de OF encontrado: {result_bayesian.fun:.4f}")
-print("Melhores hiperparâmetros (omega, phip, phig):")
+# PROCESS AND DISPLAY THE FINAL RESULTS
+print("\n--- Bayesian Optimization Completed ---")
+print(f"Best OF value found: {result_bayesian.fun:.4f}")
+print("Best hyperparameters (omega, phip, phig):")
 best_hyperparams = {name: val for name, val in zip(['omega', 'phip', 'phig'], result_bayesian.x)}
 print(best_hyperparams)
 
-# Salvar o DataFrame final com todos os resultados
+# Final DataFrame with all results
 output_file = os.path.join(root_folder, case, "calibration_results_bayesian.xlsx")
 final_df = pd.DataFrame(results_list)
 final_df.to_excel(output_file, index=False)
-print(f"\nResultados completos salvos em: {output_file}")
+print(f"\nFull results saved in: {output_file}")
 
-# Opcional: Plotar a convergência
+# Optional: Plot the convergence
 from skopt.plots import plot_convergence
 
 plot_convergence(result_bayesian)
 convergence_plot_path = os.path.join(root_folder, case, "convergence_plot.png")
 plt.savefig(convergence_plot_path)
-# print(f"Gráfico de convergência salvo em: {convergence_plot_path}")
+# print(f"Convergence chart saved in: {convergence_plot_path}")
 # plt.show()
 
 

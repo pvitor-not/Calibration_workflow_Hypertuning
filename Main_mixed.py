@@ -99,12 +99,12 @@ pop_size = 5 # Population size
 max_iter = 5  # Maximum number of iterations (termination criterion)
 
 # ==========================================================
-""" DEFINA SEU MÉTODO DE CALIBRAÇÃO AQUI: 'G' para Grid Search, 'R' para Random Search"""
+"""CALIBRATION METHOD: 'G' to Grid Search, 'R' to Random Search"""
 CALIBRATION_METHOD = 'G'
 # ==========================================================
 
 if CALIBRATION_METHOD == 'G':
-    print("Usando o método: Grid Search")
+    print("Using the method: Grid Search")
 
     ## --- GRID SEARCH ---
     # param_grid = {
@@ -117,14 +117,14 @@ if CALIBRATION_METHOD == 'G':
         'phip': [0, 1],
         'phig': [0, 1],
     }
-    # Gera o DataFrame com TODAS as combinações da grade
+    # Generates the DataFrame with ALL grid combinations.
     df = pd.DataFrame(list(ParameterGrid(param_grid)))
 
 elif CALIBRATION_METHOD == 'R':
-    print("Usando o método: Random Search")
+    print("Using the method: Random Search")
 
     ## --- RANDOM SEARCH ---
-    # Defina o número de iterações desejado para o Random Search
+    # Desired number of iterations for Random Search
     N_ITER_RANDOM = 5
 
     param_dist = {
@@ -132,20 +132,19 @@ elif CALIBRATION_METHOD == 'R':
         'phip': uniform(0, 1),
         'phig': uniform(0, 1),
     }
-    # Gera N_ITER_RANDOM combinações aleatórias
+    # Generates N_ITER_RANDOM random combinations.
     random_combinations = list(ParameterSampler(param_dist, n_iter=N_ITER_RANDOM, random_state=42))
     combinations = [{k: round(v, 2) for k, v in params.items()} for params in random_combinations]
     df = pd.DataFrame(combinations)
 
 else:
-    raise ValueError("CALIBRATION_METHOD deve ser 'G' (Grid Search) ou 'R' (Random Search).")
+    raise ValueError("CALIBRATION_METHOD it must be 'G' (Grid Search) or 'R' (Random Search).")
 
-# O DataFrame 'df' agora está pronto para o loop de simulação
 print(f"Total de combinações geradas: {len(df)}")
 
 #######################################################################################################################
 
-### LOOP DE SIMULAÇÃO ###
+### SIMULATION LOOP ###
 output_file = os.path.join(root_folder, case, "calibration_results.xlsx")
 
 df['OF_value'] = None
@@ -153,7 +152,7 @@ df['time_h'] = None
 for PV in uncertain_parameters["uncertain_parameter"]:
     df[PV] = None
 
-# Define o caminho padrão de saída do simulador
+# Standard exit path from the simulator
 default_results_folder = os.path.join(simdir, "Results")
 
 for idx, row in df.iterrows():
@@ -161,14 +160,14 @@ for idx, row in df.iterrows():
     phip = row['phip']
     phig = row['phig']
 
-    #Definição da pasta de destino para esta combinação
+    #Destination folder for this combination
     results_folder_final = os.path.join(simdir, f"Results_{idx + 1}")
 
-    #Limpeza: Garante que a pasta de destino não existe
+    #Cleanup: Ensures that the destination folder does not exist.
     if os.path.exists(results_folder_final):
         shutil.rmtree(results_folder_final)
 
-    #Limpa a pasta padrão de saída, caso o Dionisos não a sobrescreva corretamente
+    #Clears the default output folder if Dionisos does not overwrite it correctly.
     if os.path.exists(default_results_folder):
         shutil.rmtree(default_results_folder)
 
@@ -200,51 +199,51 @@ for idx, row in df.iterrows():
     tac = time.time() - tic
 
     # ==========================================================
-    # # GERENCIAMENTO E PROCESSAMENTO DE RESULTADOS
+    # MANAGEMENT AND PROCESSING OF RESULTS
     # ==========================================================
 
-    # O Functions.plotResults precisa rodar AGORA, enquanto a pasta se chama 'Results'
-    # Ele gera os gráficos dentro de 'simdir/Results/S' ou 'simdir/Results/P'
+    # The Functions.plotResults file needs to run NOW, while the folder is named 'Results'.
+    # It generates the graphs within 'simdir/Results/S' or 'simdir/Results/P'.
     Functions.plotResults(OF_type, simulation, simdir)
 
-    #LIMPEZA DE ARQUIVOS EXCEL (Novo Passo)
+    #EXCEL FILE CLEANUP
     if os.path.exists(default_results_folder):
-        print(f"Iniciando limpeza de arquivos Excel para a combinação {idx + 1}...")
+        print(f"Starting Excel file cleanup for the combination {idx + 1}...")
 
-        # Percorre a pasta principal ('Results') e todas as subpastas (como a pasta 'S')
+        # Cycles through the main folder ('Results') and all subfolders (like the 'S' folder)
         for root, dirs, files in os.walk(default_results_folder, topdown=False):
             for name in files:
-                # Verifica se o arquivo termina com .xlsx ou .xls
+                # Check if the file ends with .xlsx or .xls.
                 if name.endswith(('.xlsx', '.xls')):
                     os.remove(os.path.join(root, name))
-        print("Limpeza concluída.")
+        print("Cleaning completed.")
 
-    #Move e renomeia a pasta 'Results' (agora limpa) para 'Results_X'
+    #Move and rename the 'Results' folder (now empty) to 'Results_X'.
     if os.path.exists(default_results_folder):
         shutil.move(default_results_folder, results_folder_final)
     else:
         print(
-            f"Aviso: Pasta de resultados padrão '{default_results_folder}' não encontrada após a otimização {idx + 1}. Verifique a simulação.")
+            f"Warning: Default results folder '{default_results_folder}' not found after optimization {idx + 1}. Check the simulation.")
 
     # ==========================================================
 
-    #Continua a atualização do DataFrame
+    #The DataFrame update continues.
     for param_name, param_value in zip(uncertain_parameters["uncertain_parameter"], best_variable):
         df.at[idx, param_name] = param_value
     df.at[idx, 'OF_value'] = OF_value
-    df.at[idx, 'time_h'] = tac / 3600  # Tempo em horas
+    df.at[idx, 'time_h'] = tac / 3600  # Time in hours
 
     print("Computation time calibration:", tac, "s")
     print("The best parameter set is: ", best_variable)
     print("With a OF value of: ", OF_value)
 
-    #SALVAMENTO PARCIAL
+    #PARTIAL RESCUE
     df.insert(0, "Combination", range(1, len(df) + 1)) if "Combination" not in df.columns else None
     df.to_excel(output_file, index=False)
-    print(f"\nResultados parciais salvos em: {output_file}")
+    print(f"\nPartial results saved in: {output_file}")
 
-# Fim do loop
-print(f"\nResultados salvos em: {output_file}")
+# End of loop
+print(f"\nResults saved in: {output_file}")
 
     #######
 
