@@ -174,11 +174,21 @@ def objective_function(omega, phip, phig):
     # Result processing
     Functions.plotResults(OF_type, simulation, simdir)
     # Cleaning Excel files
-    # if os.path.exists(default_results_folder):
-    #     for root, dirs, files in os.walk(default_results_folder, topdown=False):
-    #         for name in files:
-    #             if name.endswith(('.xlsx', '.xls')):
-    #                 os.remove(os.path.join(root, name))
+    if os.path.exists(default_results_folder):
+        print("Starting Excel file cleanup...")
+
+        # Define the specific file to keep
+        file_to_keep = "Uncertain_parameters_and_OF_values"
+
+        for root, dirs, files in os.walk(default_results_folder, topdown=False):
+            for name in files:
+                # Check if the file is an Excel file
+                if name.endswith(('.xlsx', '.xls')):
+                    # Delete it ONLY if it is NOT the specific file we want to keep
+                    if not name.startswith(file_to_keep):
+                        os.remove(os.path.join(root, name))
+
+        print("Cleaning completed.")
     # Move results folder
     if os.path.exists(default_results_folder):
         shutil.move(default_results_folder, results_folder_final)

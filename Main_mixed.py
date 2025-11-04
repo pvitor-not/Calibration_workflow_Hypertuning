@@ -32,7 +32,7 @@ root_folder = r"C:\Users\00584647271\Desktop\diretorio"
 #root_folder = "C:\\Users\\45597483811\\PycharmProjects\\Calibration_workflow_v2.0_refatorado"
 
 ### STUDY CASE
-case = "Hypertuning"
+case = "data_0"
 
 ### DIONISOS PROJECT INPUT
 # Absolute initial coordinates of the project's grid defined on Dionisos interface.
@@ -100,7 +100,7 @@ max_iter = 5  # Maximum number of iterations (termination criterion)
 
 # ==========================================================
 """CALIBRATION METHOD: 'G' to Grid Search, 'R' to Random Search"""
-CALIBRATION_METHOD = 'G'
+CALIBRATION_METHOD = 'R'
 # ==========================================================
 
 if CALIBRATION_METHOD == 'G':
@@ -125,7 +125,7 @@ elif CALIBRATION_METHOD == 'R':
 
     ## --- RANDOM SEARCH ---
     # Desired number of iterations for Random Search
-    N_ITER_RANDOM = 5
+    N_ITER_RANDOM = 3
 
     param_dist = {
         'omega': uniform(0, 1),
@@ -206,16 +206,22 @@ for idx, row in df.iterrows():
     # It generates the graphs within 'simdir/Results/S' or 'simdir/Results/P'.
     Functions.plotResults(OF_type, simulation, simdir)
 
-    #EXCEL FILE CLEANUP
+    # EXCEL FILE CLEANUP
     if os.path.exists(default_results_folder):
         print(f"Starting Excel file cleanup for the combination {idx + 1}...")
 
-        # Cycles through the main folder ('Results') and all subfolders (like the 'S' folder)
+        # Define the specific file to keep
+        file_to_keep = "Uncertain_parameters_and_OF_values"
+
+        # Cycles through the main folder ('Results') and all subfolders
         for root, dirs, files in os.walk(default_results_folder, topdown=False):
             for name in files:
-                # Check if the file ends with .xlsx or .xls.
+                # Check if the file is an Excel file
                 if name.endswith(('.xlsx', '.xls')):
-                    os.remove(os.path.join(root, name))
+                    # Delete it ONLY if it is NOT the specific file we want to keep
+                    if not name.startswith(file_to_keep):
+                        os.remove(os.path.join(root, name))
+
         print("Cleaning completed.")
 
     #Move and rename the 'Results' folder (now empty) to 'Results_X'.
